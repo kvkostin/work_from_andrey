@@ -1,0 +1,8 @@
+
+ CREATE OR REPLACE STAGE azure_external_test
+  URL='azure://dlenfintcosttrackerdemo.blob.core.windows.net/datalake-enfint-costtrackerdemo/'
+  CREDENTIALS=(AZURE_SAS_TOKEN='?sv=2021-12-02&ss=bfqt&srt=co&sp=rwdlacupyx&se=2023-04-14T19:35:18Z&st=2023-04-14T11:35:18Z&spr=https&sig=VIRxlgH7Axnv9iEEbKveUtO1wbpdvZwaSUUdOVLJTeA%3D');
+
+
+  LIST @azure_external_test/CORE_STAGE/union_cost_logs
+  LIST @azure_external_test/CORE_STAGE/rep_storage_inv
