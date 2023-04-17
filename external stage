@@ -4,33 +4,35 @@
   CREDENTIALS=(AZURE_SAS_TOKEN='?sv=2021-12-02&ss=bfqt&srt=co&sp=rwdlacupyx&se=2023-05-01T14:25:43Z&st=2023-04-17T06:25:43Z&spr=https&sig=3zzyAU8MZd%2FETXu65ocjpBbAJ43EG4eQTOj0AcR8wIk%3D');
  
  --test stage--
-  LIST @azure_external_test/CORE_STAGE/union_cost_logs
-  LIST @azure_external_test/CORE_STAGE/rep_storage_inv
-
-  LIST @azure_external_test/DATA_MARTS/dm_cost_adjustments
+  LIST @azure_external_test/CORE_STAGE/union_cost_logs;
+  LIST @azure_external_test/CORE_STAGE/rep_storage_inv;
+  LIST @azure_external_test/DATA_MARTS/dm_cost_adjustments;
 
  --creating file format--
   CREATE OR REPLACE FILE FORMAT dm_parq
   TYPE = PARQUET
   COMPRESSION = SNAPPY
+  ;
 
 --test view CREATE OR REPLACE VIEW compute_usage_view as SELECT t.$1 FROM @azure_external_test/DATA_MARTS/dm_compute_usage (file_format => 'dm_parq', pattern=>'/*/*/*/*.*.snappy.parquet') t;
 
-select $1 from @azure_external_test/DATA_MARTS/dm_compute_usage (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet');
+--check data--
+--select $1 from @azure_external_test/DATA_MARTS/dm_compute_usage (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet');--
 
 --create schema and table--
- create schema data_marts;
- create or replace table data_marts.dm_compute_usage (billing_date varchar,
+-- create schema data_marts;--
+ 
+ create or replace table data_marts.dm_compute_usage (billing_date date,
                                             meter_category varchar,
-                                            payg_cost_in_usd varchar,
+                                            payg_cost_in_usd number(37,30),
                                             project_name varchar,
                                             resource_group_name varchar,
                                             subscription_name varchar);
  --copy into table from stage--    
--- truncate table data_marts.dm_compute_usage;--
+--truncate table data_marts.dm_compute_usage;--
  copy into data_marts.dm_compute_usage from (select $1:billing_date::varchar,
                                                     $1:meter_category::varchar,
-                                                    to_number($1:payg_cost_in_usd::varchar,37,30),
+                                                    $1:payg_cost_in_usd::varchar,
                                                     $1:project_name::varchar,
                                                     $1:resource_group_name::varchar,
                                                     $1:subscription_name::varchar
@@ -38,19 +40,19 @@ select $1 from @azure_external_test/DATA_MARTS/dm_compute_usage (file_format => 
 
 
 --check loaded data--
-select * from data_marts.dm_compute_usage
-order by BILLING_DATE;
+--select * from data_marts.dm_compute_usage--
+--order by BILLING_DATE;--
 
 --check data--
-select $1 from @azure_external_test/DATA_MARTS/dm_cost_adjustments (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet');
+--select $1 from @azure_external_test/DATA_MARTS/dm_cost_adjustments (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet');--
 
 
 --truncate table data_marts.dm_cost_adjustments--
 --create table--
-create or replace table data_marts.dm_cost_adjustments (billing_date varchar,
+create or replace table data_marts.dm_cost_adjustments (billing_date date,
                                             meter_name varchar,
                                             meter_subcategory varchar,
-                                            payg_cost_in_usd varchar,
+                                            payg_cost_in_usd number(37,30),
                                             product_name varchar,
                                             project_name varchar,
                                             reallocated varchar,
@@ -61,7 +63,7 @@ create or replace table data_marts.dm_cost_adjustments (billing_date varchar,
  copy into data_marts.dm_cost_adjustments from (select  $1:billing_date::varchar,
                                                         $1:meter_name::varchar,
                                                         $1:meter_subcategory::varchar,
-                                                        to_number($1:payg_cost_in_usd::varchar,37,30),
+                                                        $1:payg_cost_in_usd::varchar,
                                                         $1:product_name::varchar,
                                                         $1:project_name::varchar,
                                                         $1:reallocated::varchar,
@@ -70,14 +72,14 @@ create or replace table data_marts.dm_cost_adjustments (billing_date varchar,
                                              from @azure_external_test/DATA_MARTS/dm_cost_adjustment (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet') ); 
 
 --check loaded data--
-select * from data_marts.dm_cost_adjustments
-order by billing_date;
+--select * from data_marts.dm_cost_adjustments--
+--order by billing_date;--
 
-select $1 from @azure_external_test/DATA_MARTS/dm_cost_metrics (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet'); 
+--select $1 from @azure_external_test/DATA_MARTS/dm_cost_metrics (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet');-- 
 --create table--
-create or replace table data_marts.dm_cost_metrics (billing_date varchar,
+create or replace table data_marts.dm_cost_metrics (billing_date date,
                                                     meter_category varchar,
-                                                    metric_value varchar,
+                                                    metric_value number(37,30),
                                                     project_name varchar,
                                                     reallocated varchar,
                                                     resource_group_name varchar,
@@ -87,7 +89,7 @@ create or replace table data_marts.dm_cost_metrics (billing_date varchar,
 --copy into table from stage--                                           
  copy into data_marts.dm_cost_metrics from (select      $1:billing_date::varchar,
                                                         $1:meter_category::varchar,
-                                                        to_number($1:metric_value::varchar,37,30),
+                                                        $1:metric_value::varchar,
                                                         $1:project_name::varchar,
                                                         $1:reallocated::varchar,
                                                         $1:resource_group_name::varchar,
@@ -95,14 +97,14 @@ create or replace table data_marts.dm_cost_metrics (billing_date varchar,
                                              from @azure_external_test/DATA_MARTS/dm_cost_metrics (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet') ); 
 
 --check loaded data--
-select * from data_marts.dm_cost_metrics
-order by billing_date;
+--select * from data_marts.dm_cost_metrics--
+--order by billing_date;--
 
 
-select $1 from @azure_external_test/DATA_MARTS/dm_detail_costs (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet'); 
+--select $1 from @azure_external_test/DATA_MARTS/dm_detail_costs (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet');-- 
 
 --create table--
-truncate table data_marts.dm_detail_costs
+--truncate table data_marts.dm_detail_costs--
 create or replace table data_marts.dm_detail_costs( billing_currency varchar,
                                                     billing_date date,
                                                     billing_date_fmt date,
@@ -113,7 +115,7 @@ create or replace table data_marts.dm_detail_costs( billing_currency varchar,
                                                     cost_in_usd number(37,30),
                                                     department_name varchar,
                                                     effective_price number(37,30),
-                                                    exchange_rate_date varchar,
+                                                    exchange_rate_date date,
                                                     exchange_rate_pricing_to_billing varchar,
                                                     meter_category varchar,
                                                     meter_id varchar,
@@ -135,7 +137,7 @@ create or replace table data_marts.dm_detail_costs( billing_currency varchar,
                                                     unit_of_measure varchar,
                                                     unit_price varchar);
 
-select * from data_marts.dm_detail_costs
+--select * from data_marts.dm_detail_costs--
 
  --copy into table from stage--                                                   
  copy into data_marts.dm_detail_costs from (select    $1:billing_currency::varchar,
@@ -148,7 +150,7 @@ select * from data_marts.dm_detail_costs
                                                       $1:cost_in_usd::varchar,
                                                       $1:department_name::varchar,
                                                       $1:effective_price::varchar,
-                                                      $1:exchange_rate_date::varchar,
+                                                      TO_VARCHAR($1:exchange_rate_date::date,'YYYY-MM-DD'),
                                                       $1:exchange_rate_pricing_to_billing::varchar,
                                                       $1:meter_category::varchar,
                                                       $1:meter_id::varchar,
@@ -172,10 +174,11 @@ select * from data_marts.dm_detail_costs
                                              from @azure_external_test/DATA_MARTS/dm_detail_costs (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet') ); 
 
 --check data--
-select * from data_marts.dm_detail_costs;
+--select * from data_marts.dm_detail_costs;--
 
-select $1 from @azure_external_test/DATA_MARTS/dm_detail_costs_reallocation (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet'); 
+--select $1 from @azure_external_test/DATA_MARTS/dm_detail_costs_reallocation (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet'); --
 
+--create table--
 create or replace table data_marts.dm_detail_costs_reallocation ( billing_date date,
                                                                   budget_name varchar,
                                                                   department_name varchar,
@@ -203,4 +206,117 @@ create or replace table data_marts.dm_detail_costs_reallocation ( billing_date d
                                              from @azure_external_test/DATA_MARTS/dm_detail_costs_reallocation (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet') ); 
 
 --check table--
-select * from data_marts.dm_detail_costs_reallocation;
+--select * from data_marts.dm_detail_costs_reallocation;--
+
+
+--select $1 from @azure_external_test/DATA_MARTS/dm_detail_costs_synthetic (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet'); --
+
+--create table--
+create or replace table data_marts.dm_detail_costs_synthetic ( billing_currency varchar,
+                                                               billing_date_fmt date,
+                                                               consumed_service varchar,
+                                                               cost_in_billing_currency number(37,30),
+                                                               cost_in_pricing_currency number(37,30),
+                                                               cost_in_usd number(37,30),
+                                                               effective_price number(37,30),
+                                                               exchange_rate_date date,
+                                                               exchange_rate_pricing_to_billing varchar,
+                                                               meter_category varchar,
+                                                               meter_id varchar,
+                                                               meter_name varchar,
+                                                               meter_region varchar,
+                                                               meter_subcategory varchar,
+                                                               pay_g_price number(37,30),
+                                                               payg_cost_in_billing_currency number(37,30),
+                                                               payg_cost_in_usd number(37,30),
+                                                               pricing_currency varchar,
+                                                               product_id varchar,
+                                                               product_name varchar,
+                                                               quantity number(37,30),
+                                                               resource_group_name varchar,
+                                                               source_system_and_file_name varchar,
+                                                               subscription_id varchar,
+                                                               subscription_name varchar,
+                                                               "tags" variant,
+                                                               unit_of_measure varchar,
+                                                               unit_price number(37,30) );
+
+--copy into table from stage--
+copy into data_marts.dm_detail_costs_synthetic from (select $1:billing_currency::varchar,
+                                                               $1:billing_date_fmt::varchar,
+                                                               $1:consumed_service::varchar,
+                                                               $1:cost_in_billing_currency::varchar,
+                                                               $1:cost_in_pricing_currency::varchar,
+                                                               $1:cost_in_usd::varchar,
+                                                               $1:effective_price::varchar,
+                                                               TO_VARCHAR($1:exchange_rate_date::date,'YYYY-MM-DD'),
+                                                               $1:exchange_rate_pricing_to_billing::varchar,
+                                                               $1:meter_category::varchar,
+                                                               $1:meter_id::varchar,
+                                                               $1:meter_name::varchar,
+                                                               $1:meter_region::varchar,
+                                                               $1:meter_subcategory::varchar,
+                                                               $1:pay_g_price::varchar,
+                                                               $1:payg_cost_in_billing_currency::varchar,
+                                                               $1:payg_cost_in_usd::varchar,
+                                                               $1:pricing_currency::varchar,
+                                                               $1:product_id::varchar,
+                                                               $1:product_name::varchar,
+                                                               $1:quantity::varchar,
+                                                               $1:resource_group_name::varchar,
+                                                               $1:source_system_and_file_name::varchar, 
+                                                               $1:subscription_id::varchar,
+                                                               $1:subscription_name::varchar,
+                                                               $1:"tags"::variant,
+                                                               $1:unit_of_measure::varchar,
+                                                               $1:unit_price::varchar
+                                             from @azure_external_test/DATA_MARTS/dm_detail_costs_synthetic (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet') );
+
+--check table--
+--select * from data_marts.dm_detail_costs_synthetic;--
+
+--select $1 from @azure_external_test/DATA_MARTS/dm_storage_usage (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet');-- 
+
+create or replace table data_marts.dm_storage_usage (billing_date date,
+                                                     meter_category varchar,
+                                                     percent_size number(37,30),
+                                                     project_name varchar,
+                                                     resource_group_name varchar,
+                                                     size_mb number(37,30),
+                                                     subscription_name varchar);
+ --copy into table from stage--    
+-- truncate table data_marts.dm_compute_usage;--
+ copy into data_marts.dm_storage_usage from (select $1:billing_date::varchar,
+                                                    $1:meter_category::varchar,
+                                                    $1:percent_size::varchar,
+                                                    $1:project_name::varchar,
+                                                    $1:resource_group_name::varchar,
+                                                    $1:size_mb::varchar,
+                                                    $1:subscription_name::varchar
+                                             from @azure_external_test/DATA_MARTS/dm_storage_usage (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet') );
+
+--select * from data_marts.dm_storage_usage;--
+
+
+--select $1 from @azure_external_test/DATA_MARTS/dm_storage_usage_synthetic (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet'); --
+
+--create table--
+create or replace table data_marts.dm_storage_usage_synthetic (billing_date date,
+                                                     meter_category varchar,
+                                                     percent_size number(37,30),
+                                                     project_name varchar,
+                                                     resource_group_name varchar,
+                                                     size_mb number(37,30),
+                                                     subscription_name varchar);
+
+--fill--
+copy into data_marts.dm_storage_usage_synthetic from (select  $1:billing_date::varchar,
+                                                    $1:meter_category::varchar,
+                                                    $1:percent_size::varchar,
+                                                    $1:project_name::varchar,
+                                                    $1:resource_group_name::varchar,
+                                                    $1:size_mb::varchar,
+                                                    $1:subscription_name::varchar
+                                               from @azure_external_test/DATA_MARTS/dm_storage_usage_synthetic (file_format => 'dm_parq', pattern=>'/*.*.snappy.parquet') );
+
+--select * from data_marts.dm_storage_usage_synthetic --
